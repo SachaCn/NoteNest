@@ -2,7 +2,6 @@
 
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import validator from "validator";
 import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
@@ -11,42 +10,27 @@ export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
 
-    if (!validator.isEmail(body.email)) {
-      throw createError({
-        statusCode: 400,
-        message: "Invalid email",
-      });
-    }
-    if (
-      !validator.isStrongPassword(body.password, {
-        minLength: 8,
-        minLowercase: 1,
-        minUppercase: 1,
-        minNumbers: 1,
-        minSymbols: 1,
-      })
-    ) {
-      throw createError({
-        statusCode: 400,
-        message: "Password is not strong enough",
-      });
-    }
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(body.password, salt);
-
-    const user = await prisma.user.create({
-      data: {
+    const user = await prisma.user.findUnique({
+      where: {
         email: body.email,
-        password: hashedPassword,
-        salt: salt,
       },
     });
+    const isValid = await bcrypt.compare(body.password, user.password);
+    console.log("isValid", isValid);
+
+    if (!isValid) {
+      throw createError({
+        statusCode: 400,
+        message: "Username or password is incorrect",
+      });
+    }
+
     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
     setCookie(event, "NoteNestJWT", token);
 
-    return { data: "User created successfully" };
+    return { data: "User logged in successfully" };
   } catch (error) {
     console.log(error.message);
     if (error.code === "P2002") {

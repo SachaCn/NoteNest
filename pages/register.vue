@@ -8,8 +8,10 @@
       </h1>
       <p class="text-zinc-300 text-sm">
         Already registered?
-        <span class="font-bold text-[#FFAC00] underline">Log in</span> to your
-        account
+        <NuxtLink to="/login" class="font-bold text-[#FFAC00] underline"
+          >Log in</NuxtLink
+        >
+        to your account
       </p>
       <form @submit.prevent="submit">
         <div class="mt-8">
@@ -67,11 +69,14 @@ async function submit() {
       body: { email: email.value, password: password.value },
     });
     console.log(response);
-    Swal.fire({
+    const { isConfirmed } = await Swal.fire({
       icon: "success",
       title: "Success!",
       text: response.data,
     });
+    if (isConfirmed) {
+      navigateTo("/");
+    }
   } catch (error) {
     console.log(error.response?._data?.message);
     Swal.fire({
